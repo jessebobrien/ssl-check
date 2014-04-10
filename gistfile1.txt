@@ -9,4 +9,8 @@ echo "$CERT" | grep "Not After :"
 
 
 CURDATE=$(date +%b" "%d" "%H:%M:%S" "%Y)
-echo "$CURDATE"
+DATEMODE="            Not After : "
+GMT=" GTM"
+
+DISPLAYDATE="$DATEMODE""$CURDATE""$GMT"
+echo "$DISPLAYDATE"
