@@ -5,7 +5,7 @@ echo "Please enter web address to check:"
 read URL
 
 CERT=$(echo | openssl s_client -connect "$URL":443 2>/dev/null | openssl x509 -noout -text)
-echo "$CERT" | grep "Not After :"
+DISPLAYCERT=$(echo "$CERT" | grep "Not After :")
 
 
 CURDATE=$(date +%b" "%d" "%H:%M:%S" "%Y)
@@ -14,3 +14,7 @@ GMT=" GMT"
 
 DISPLAYDATE="$DATEMODE""$CURDATE""$GMT"
 echo "$DISPLAYDATE"
+
+DISPLAYCERT=${DISPLAYCERT#*: }      # Removes preceeding junk string text
+DISPLAYCERT=${DISPLAYCERT& GTM}     # Removes Time Zone at end of string
+date --date="$DISPLAYCERT" +%s
