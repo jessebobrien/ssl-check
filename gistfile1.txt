@@ -1,17 +1,16 @@
 #!/bin/bash
 # This script is intended to easily check information of a cert and verify validity for at least 60 days
 
-#ask for input
+# ask for input
 echo "Please enter web address to check [www.example.com]:"
-
-#puts input into a string
+# puts input into a string
 read URL
 
-#pulls entire cert for given URL
+# pulls entire cert for given URL
 FULLCERT=$(echo | openssl s_client -connect "$URL":443 2>/dev/null | openssl x509 -noout -text )
-#cuts entire cert down the a string that is the line containing the expiration date of cert
+# cuts entire cert down the a string that is the line containing the expiration date of cert
 CERTEXP=$(echo "$FULLCERT" | grep "Not After :")
-#gives us current time in identical format to cert
+# gives us current time in identical format to cert
 CURDATE=$(date +%b" "%d" "%H:%M:%S" "%Y" "%Z)
 # this cuts the cert date down
 CERTEXP=${CERTEXP#*: }
@@ -19,9 +18,19 @@ CERTEXP=${CERTEXP#*: }
 epochcert=`date --date="$CERTEXP" +%s`
 # gives us identical epoch time for time as run
 epochnow=`date +%s`
+# calculate differnce between epoch dates
+DATEDIFF=$(expr "$epochcert" - "$epochnow")
 
-#display results
+# display results
 echo "$CERTEXP"" : This is when their cert expires"
 echo "$CURDATE"" : This is today's date"
 echo "$epochcert"" : This is cert expiration in epoch time"
 echo "$epochnow"" : This is today's date in epoch time"
+echo "$DATEDIFF"" : This is the difference in epoch"
+
+# verify difference isn't less than 60 days
+if [ "$DATEDIFF" -lt "5184000" ]; then
+        echo "!!!!This cert is expiring soon!!!!"
+else
+        echo "This cert has more than 60 days left, no rush. Go grab some coffee."
+fi
