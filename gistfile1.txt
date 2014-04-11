@@ -1,20 +1,27 @@
 #!/bin/bash
 # This script is intended to easily check information of a cert and verify validity for at least 60 days
 
-echo "Please enter web address to check:"
+#ask for input
+echo "Please enter web address to check [www.example.com]:"
+
+#puts input into a string
 read URL
 
-CERT=$(echo | openssl s_client -connect "$URL":443 2>/dev/null | openssl x509 -noout -text)
-DISPLAYCERT=$(echo "$CERT" | grep "Not After :")
+#pulls entire cert for given URL
+FULLCERT=$(echo | openssl s_client -connect "$URL":443 2>/dev/null | openssl x509 -noout -text )
+#cuts entire cert down the a string that is the line containing the expiration date of cert
+CERTEXP=$(echo "$FULLCERT" | grep "Not After :")
+#gives us current time in identical format to cert
+CURDATE=$(date +%b" "%d" "%H:%M:%S" "%Y" "%Z)
+# this cuts the cert date down
+CERTEXP=${CERTEXP#*: }
+# converts cert date to epoch time
+epochcert=`date --date="$CERTEXP" +%s`
+# gives us identical epoch time for time as run
+epochnow=`date +%s`
 
-
-CURDATE=$(date +%b" "%d" "%H:%M:%S" "%Y)
-DATEMODE="            Not After : "
-GMT=" GMT"
-
-DISPLAYDATE="$DATEMODE""$CURDATE""$GMT"
-echo "$DISPLAYDATE"
-
-DISPLAYCERT=${DISPLAYCERT#*: }      # Removes preceeding junk string text
-DISPLAYCERT=${DISPLAYCERT& GTM}     # Removes Time Zone at end of string
-date --date="$DISPLAYCERT" +%s
+#display results
+echo "$CERTEXP"" : This is when their cert expires"
+echo "$CURDATE"" : This is today's date"
+echo "$epochcert"" : This is cert expiration in epoch time"
+echo "$epochnow"" : This is today's date in epoch time"
