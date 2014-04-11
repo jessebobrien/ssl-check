@@ -63,7 +63,7 @@ function main()
 	drawReport
 }
 
-# if an argument is proficded, it is set to the URL.
+# if an argument is provided, it is set to the URL.
 unset URL
 URL="$1"
 main $URL
