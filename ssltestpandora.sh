@@ -54,7 +54,7 @@ function pullCert()
 function drawReport()
 {
 	# draw results
-	printf "$datediff"
+	printf "$daysleft"
 }
 
 function main()
