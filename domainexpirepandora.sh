@@ -23,7 +23,7 @@ function pullwhois()
         # pulls entire cert for given URL
         fullwhois=$(echo | whois "$URL" 2>/dev/null)
         # cuts entire cert down the a string that is the line containing the expiration date of cert
-        cutwhois=$(echo "$fullwhois" | grep -i -m 1 "Expiration\|Expiry")
+        cutwhois=$(echo "$fullwhois" | grep -i -m 1 "Expiration\|Expiry\|Expire")
         # this cuts the cert date down
         cutwhois=${cutwhois#*: }
         # converts cert date to epoch time
