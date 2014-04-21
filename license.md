@@ -1,6 +1,6 @@
 The MIT License (MIT)
 
-Copyright (c) 2014 Nathan Shobe, Jesse O'Brien, and the Center for Investigative Reporting
+Copyright (c) 2014 Nathan Shobe, Jesse O'Brien, the Center for Investigative Reporting, and 4D Technologies
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
