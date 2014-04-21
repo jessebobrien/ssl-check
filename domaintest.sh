@@ -17,33 +17,33 @@ function getUrl()
 }
 function checkUrl()
 {
-        # gives us a value to work with.
-        checkUrl=`dig +short $URL`
-        #checks output and displays message and gives boolean output to work with
-        if [ -n "$checkUrl" ]; then
-                printf "\nHostname: $URL is valid.\n"
-                urlGood=true
-        else
-                printf "\nCould NOT verify $URL exists!\n"
-                urlGood=false
-        fi
+	# gives us a value to work with.
+	checkUrl=`dig +short $URL`
+	#checks output and displays message and gives boolean output to work with
+	if [ -n "$checkUrl" ]; then
+			printf "\nHostname: $URL is valid.\n"
+			urlGood=true
+	else
+			printf "\nCould NOT verify $URL exists!\n"
+			urlGood=false
+	fi
 }
 function pullwhois()
 {
-        # pulls entire cert for given URL
-        fullwhois=$(echo | whois "$URL" 2>/dev/null)
-        # cuts entire cert down the a string that is the line containing the expiration date of cert
-        cutwhois=$(echo "$fullwhois" | grep -i -m 1 "Expiration\|Expiry")
-        # this cuts the cert date down
-        cutwhois=${cutwhois#*: }
-        # converts cert date to epoch time
-        epochwhois=`date --date="$cutwhois" +%s`
-        # gives us identical epoch time for time as run
-        epochnow=`date +%s`
-        # calculate differnce between epoch dates
-        datediff=$(expr "$epochwhois" - "$epochnow")
-        # give days left in readable format
-        daysleft=$(($datediff/86400))
+	# pulls entire cert for given URL
+	fullwhois=$(echo | whois "$URL" 2>/dev/null)
+	# cuts entire cert down the a string that is the line containing the expiration date of cert
+	cutwhois=$(echo "$fullwhois" | grep -i -m 1 "Expiration\|Expiry")
+	# this cuts the cert date down
+	cutwhois=${cutwhois#*: }
+	# converts cert date to epoch time
+	epochwhois=`date --date="$cutwhois" +%s`
+	# gives us identical epoch time for time as run
+	epochnow=`date +%s`
+	# calculate differnce between epoch dates
+	datediff=$(expr "$epochwhois" - "$epochnow")
+	# give days left in readable format
+	daysleft=$(($datediff/86400))
 }
 function drawReport()
 {
@@ -53,9 +53,9 @@ function drawReport()
 	# verify difference isn't less than 60 days
 	if [ "$datediff" -lt "5184000" ]; then
 			printf "\n!!!!This cert is expiring in $daysleft!!!!\n"
-                        printf "\n\nAn email has been sent to the root user of this machine\n\n"
-                        echo "ATTENTION! This cert is expiring in $daysleft days, please correct immediately: ""$URL" | \
-                         mail -s "SSL Expiration Warning!" root
+						printf "\n\nAn email has been sent to the root user of this machine\n\n"
+						echo "ATTENTION! This cert is expiring in $daysleft days, please correct immediately: ""$URL" | \
+						 mail -s "SSL Expiration Warning!" root
 	else
 			echo "This cert has $daysleft days left, no rush. Go grab some coffee."
 	fi
@@ -70,14 +70,14 @@ function main()
 		getUrl
 		checkUrl
 		if [ "$urlGood" = false ]; then
-                        exit 0
-                fi
+						exit 0
+				fi
 	else
 		URL="$1"
-                checkUrl
-                if [ "$urlGood" = false ]; then
-                        exit 0
-                fi
+				checkUrl
+				if [ "$urlGood" = false ]; then
+						exit 0
+				fi
 	fi
 	pullwhois
 	drawReport
