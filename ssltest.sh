@@ -12,7 +12,7 @@ function exit_error()
 function getUrl()
 {
 	# ask for input
-	echo "Please enter web address to check [www.example.com]:"
+	printf "Please enter web address to check [www.example.com]:\n"
 	# puts input into a string
 	read URL
 }
@@ -22,24 +22,46 @@ function checkUrl()
 	checkUrl=`dig +short $URL`
 	#checks output and displays message and gives boolean output to work with
 	if [ -n "$checkUrl" ]; then
-			printf "\nHostname: $URL is valid.\n"
+			printf "Hostname: $URL is valid.\n"
 			urlGood=true
 	else
-			printf "\nCould NOT verify $URL exists!\n"
+			printf "Could NOT verify $URL exists!\n"
 			urlGood=false
 	fi
 }
-function checkssl
+function quietCheckurl()
+{
+        checkUrl=`dig +short $URL`
+        if [ -n "$checkUrl" ]; then
+                urlGood=true
+        else
+                urlGood=false
+        fi
+}
+function checkSsl()
 {
 	# gives variable string conetent if we found the certificate
 	certexists=$(echo | openssl s_client -connect "$URL":443 2>/dev/null | openssl x509 -noout -dates | grep After)
 	# exits script if no variable value with error message
 	if [[ $certexists == *After* ]]; then
-			printf "\nSSL Appears to be present\n"
+		printf "SSL Appears to be present\n"
+		sslGood=true
 	else
-			printf "\nSSL was not found!\n"
-			exit 0
+		printf "SSL was not found!\n"
+		sslGood=false
+		exit 0
 	fi
+}
+function quietCheckssl()
+{
+        certexists=$(echo | openssl s_client -connect "$URL":443 2>/dev/null | openssl x509 -noout -dates | grep After)
+        if [[ $certexists == *After* ]]; then
+		sslGood=true
+        else
+		sslGood=false
+                exit 0
+        fi
+
 }
 function pullCert()
 {
@@ -77,7 +99,10 @@ function drawReport()
 			echo "This cert has $daysleft days left, no rush. Go grab some coffee."
 	fi
 }
-
+function quietReport()
+{
+	printf "$daysleft"
+}
 function main()
 {
 	# main loop
@@ -87,21 +112,49 @@ function main()
 		getUrl
 		checkUrl
 		if [ "$urlGood" = false ]; then
-						exit 0
+						exit 1
 				fi
 	else
 		URL="$1"
 				checkUrl
 				if [ "$urlGood" = false ]; then
-						exit 0
+						exit 1
 				fi
 	fi
-	checkssl
+	checkSsl
 	pullCert
 	drawReport
 }
-
+function quietMain()
+{
+	quietCheckurl
+                if [ "$urlGood" = false ]; then
+			printf "URL Error"
+	                exit 1
+                fi
+	quietCheckssl
+		if [ "$sslGood" = false ]; then
+			print "SSL Error"
+			exit 1
+		fi
+	pullCert
+	quietReport
+}
 # if an argument is provided, it is set to the URL.
 unset URL
 URL="$1"
+#main $URL
+while getopts ":q:" quiet; do
+	case $quiet in
+		q)
+			URL="$OPTARG"
+			quietMain $URL
+			exit 0
+			;;
+		:)
+			printf "Option -$OPTARG requires an arguement.\n"
+			exit 1
+			;;
+	esac
+done
 main $URL
