@@ -28,6 +28,15 @@ function checkUrl()
 			urlGood=false
 	fi
 }
+function quietCheckurl()
+{
+        checkUrl=`dig +short $URL`
+        if [ -n "$checkUrl" ]; then
+                        urlGood=true
+        else
+                        urlGood=false
+        fi
+}
 function pullwhois()
 {
 	# pulls entire cert for given URL
@@ -60,7 +69,10 @@ function drawReport()
 			echo "This cert has $daysleft days left, no rush. Go grab some coffee."
 	fi
 }
-
+function quietReport()
+{
+	printf "$daysleft"
+}
 function main()
 {
 	# main loop
@@ -82,8 +94,32 @@ function main()
 	pullwhois
 	drawReport
 }
+function quietMain()
+{
+        quietCheckurl
+                if [ "$urlGood" = false ]; then
+                        printf "URL Error"
+                        exit 1
+                fi
+        pullwhois
+        quietReport
+}
 
 # if an argument is provided, it is set to the URL.
 unset URL
 URL="$1"
+while getopts ":q:" quiet; do
+        case $quiet in
+                q)
+                        URL="$OPTARG"
+                        quietMain $URL
+                        exit 0
+                        ;;
+                :)
+                        printf "Option -$OPTARG requires an arguement.\n"
+                        exit 1
+                        ;;
+        esac
+done
+
 main $URL
