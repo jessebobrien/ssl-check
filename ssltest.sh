@@ -94,10 +94,15 @@ function parseopts() {
 	done
 
 	if [[ -z $DAYS ]] ; then
-		# read input into a string
-		read -p "How many days of validity do you require? [default: 60] " DAYS
-		DAYS=${DAYS:-60}
+	# we need to know how many days to compare against.
+		if [ $VERBOSE -eq 1 ] ; then
+			read -p "How many days of validity do you require? [default: 60] " DAYS
+			DAYS=${DAYS:-60}
+		else
+			DAYS=60
+		fi
 	fi
+
 	if [[ -z $URL ]] ; then
 		# no URL provided!
 		usage
