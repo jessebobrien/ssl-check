@@ -81,7 +81,7 @@ function drawReport()
 	printf "$daysleft\n" #print this even if verbose isn't active, provides parseable output for other applications.
 }
 
-parseopts() {
+function parseopts() {
 	# Arguments Parser
 
 	while getopts "d:u:dhqv" OPTION ; do
