@@ -95,7 +95,7 @@ function parseopts() {
 
 	if [[ -z $DAYS ]] ; then
 	# we need to know how many days to compare against.
-		if [ $VERBOSE -eq 1 ] ; then
+		if [[ $VERBOSE -eq 1 ]] ; then
 			read -p "How many days of validity do you require? [default: 60] " DAYS
 			DAYS=${DAYS:-60}
 		else
