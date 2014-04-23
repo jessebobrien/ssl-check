@@ -9,6 +9,29 @@ function exit_error()
 	exit 1
 }
 
+function usage() {
+	cat << EOF
+	usage: $0 options
+	OPTIONS:
+	 -h Show [H]elp (this message)
+	 -d [D]ays to compare against                                                     (not yet implemented)
+	 -u [U]rl to verify                                                            [Required][Value Needed]
+	 -v [V]erbose
+EOF
+exit 1
+}
+
+function timestamp() {
+	date +%F_%T
+}
+
+function verbose() {
+	# if verbose mode is active, display a nice message.
+	if [[ $VERBOSE -eq 1 ]] ; then
+		printf "$(timestamp) $* \n"
+	fi
+}
+
 function checkUrl()
 {
 	# gives us a value to work with.
@@ -82,7 +105,7 @@ function drawReport()
 }
 
 function parseopts() {
-	# Arguments Parser
+	# command-line argument parsing
 
 	while getopts "d:u:dhqv" OPTION ; do
 		case $OPTION in
@@ -94,7 +117,7 @@ function parseopts() {
 	done
 
 	if [[ -z $DAYS ]] ; then
-	# we need to know how many days to compare against.
+		# we need to know how many days to compare against.
 		if [[ $VERBOSE -eq 1 ]] ; then
 			read -p "How many days of validity do you require? [default: 60] " DAYS
 			DAYS=${DAYS:-60}
@@ -124,29 +147,6 @@ function main()
 	checkSsl
 	pullCert
 	drawReport
-}
-
-function usage() {
-	cat << EOF
-	usage: $0 options
-	OPTIONS:
-	 -h Show [H]elp (this message)
-	 -d [D]ays to compare against                                                     (not yet implemented)
-	 -u [U]rl to verify                                                            [Required][Value Needed]
-	 -v [V]erbose
-EOF
-exit 1
-}
-
-function timestamp() {
-	date +%F_%T
-}
-
-function verbose() {
-	# if verbose mode is active, display a nice message.
-	if [[ $VERBOSE -eq 1 ]] ; then
-		printf "$(timestamp) $* \n"
-	fi
 }
 
 # Clear any pre-existing arguments
