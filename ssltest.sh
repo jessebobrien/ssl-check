@@ -5,76 +5,53 @@
 function exit_error()
 {
 	# explain the error and quit.
-	printf "We experienced a problem: $1"
+	printf "We experienced a problem: $1\n"
 	exit 1
 }
 
-function getUrl()
-{
-	# ask for input
-	printf "Please enter web address to check [www.example.com]:\n"
-	# puts input into a string
-	read URL
-}
 function checkUrl()
 {
 	# gives us a value to work with.
-	checkUrl=`dig +short $URL`
+	checkUrl=$(dig +short $URL)
+	verbose "Digging for $URL"
 	#checks output and displays message and gives boolean output to work with
 	if [ -n "$checkUrl" ]; then
-			printf "Hostname: $URL is valid.\n"
-			urlGood=true
+			verbose "Hostname: $URL is valid."
+			URLGOOD=true
 	else
-			printf "Could NOT verify $URL exists!\n"
-			urlGood=false
+			verbose "Could NOT verify $URL exists!"
+			URLGOOD=false
+			exit_error "URL is no good!"
 	fi
 }
-function quietCheckurl()
-{
-        checkUrl=`dig +short $URL`
-        if [ -n "$checkUrl" ]; then
-                urlGood=true
-        else
-                urlGood=false
-        fi
-}
+
 function checkSsl()
 {
 	# gives variable string conetent if we found the certificate
-	certexists=$(echo | openssl s_client -connect "$URL":443 2>/dev/null | openssl x509 -noout -dates | grep After)
+	CERTEXISTS=$(echo | openssl s_client -connect "$URL":443 2>/dev/null | openssl x509 -noout -dates | grep After)
 	# exits script if no variable value with error message
-	if [[ $certexists == *After* ]]; then
-		printf "SSL Appears to be present\n"
-		sslGood=true
+	if [[ $CERTEXISTS == *After* ]]; then
+		verbose "SSL Appears to be present"
+		SSLGOOD=true
 	else
-		printf "SSL was not found!\n"
-		sslGood=false
+		verbose "SSL was not found!"
+		SSLGOOD=false
 		exit 0
 	fi
 }
-function quietCheckssl()
-{
-        certexists=$(echo | openssl s_client -connect "$URL":443 2>/dev/null | openssl x509 -noout -dates | grep After)
-        if [[ $certexists == *After* ]]; then
-		sslGood=true
-        else
-		sslGood=false
-                exit 0
-        fi
 
-}
 function pullCert()
 {
 	# pulls entire cert for given URL
-	fullcert=$(echo | openssl s_client -connect "$URL":443 2>/dev/null | openssl x509 -noout -text )
+	FULLCERT=$(echo | openssl s_client -connect "$URL":443 2>/dev/null | openssl x509 -noout -text )
 	# cuts entire cert down the a string that is the line containing the expiration date of cert
-	certexp=$(echo "$fullcert" | grep "Not After :")
+	CERTEXP=$(echo "$FULLCERT" | grep "Not After :")
 	# this cuts the cert date down
-	certexp=${certexp#*: }
+	CERTEXP=${CERTEXP#*: }
 	# gives us current time in identical format to cert
-	datum=$(date +%b" "%d" "%H:%M:%S" "%Y" "%Z)
+	DATUM=$(date +%b" "%d" "%H:%M:%S" "%Y" "%Z)
 	# converts cert date to epoch time
-	epochcert=`date --date="$certexp" +%s`
+	epochcert=`date --date="$CERTEXP" +%s`
 	# gives us identical epoch time for time as run
 	epochnow=`date +%s`
 	# calculate differnce between epoch dates
@@ -85,76 +62,94 @@ function pullCert()
 
 function drawReport()
 {
-	# draw results
-	printf "\n%-20s %-40s %-20s\n" "URL" "Expires" "Difference (epoch)" #header
-	printf "%-20s %-40s %-20s\n\n" "${URL}" "${certexp}" "${datediff}" #data
+	# draw results if verbose mode is enabled
+	if [[ $VERBOSE -eq 1 ]] ; then
+		printf "\n%-20s %-40s %-20s\n" "URL" "Expires" "Difference (epoch)" #header
+		printf "%-20s %-40s %-20s\n\n" "${URL}" "${CERTEXP}" "${datediff}" #data
+	fi
 
 	# verify difference isn't less than 60 days
 	if [ "$datediff" -lt "5184000" ]; then
-			printf "!!!!This cert is expiring on %s!!!!", $certexp
-						printf "\n\nAn email has been sent to the root user of this machine\n\n"
-						echo "ATTENTION! This cert is expiring in $daysleft days, please correct immediately: ""$URL" | \
-						 mail -s "SSL Expiration Warning!" root
+			verbose "!!!!This cert is expiring on %s!!!!", $CERTEXP
+						verbose "\n\nAn email has been sent to the root user of this machine\n\n"
+						verbose "ATTENTION! This cert is expiring in $daysleft days, please correct immediately: ""$URL" | \
+						mail -s "SSL Expiration Warning!" root
 	else
-			echo "This cert has $daysleft days left, no rush. Go grab some coffee."
+			verbose "This cert has $daysleft days left, much better than the $DAYS you had requested. Go grab some coffee."
 	fi
+
+	printf "$daysleft\n" #print this even if verbose isn't active, provides parseable output for other applications.
 }
-function quietReport()
-{
-	printf "$daysleft"
+
+parseopts() {
+	# Arguments Parser
+
+	while getopts "d:u:dhqv" OPTION ; do
+		case $OPTION in
+		h) usage          ;;
+		d) DAYS=$OPTARG   ;;
+		u) URL=$OPTARG    ;;
+		v) VERBOSE=1      ;;
+		esac
+	done
+
+	if [[ -z $DAYS ]] ; then
+		# read input into a string
+		read -p "How many days of validity do you require? [default: 60] " DAYS
+		DAYS=${DAYS:-60}
+	fi
+	if [[ -z $URL ]] ; then
+		# no URL provided!
+		usage
+	fi
+	verbose "Verbose mode is enabled."
+	verbose "Comparing $URL against $DAYS days."
 }
+
 function main()
 {
 	# main loop
-
-	# If the URL isn't already set, request it.
-	if [[ -z "$URL" ]]; then
-		getUrl
-		checkUrl
-		if [ "$urlGood" = false ]; then
-						exit 1
-				fi
-	else
-		URL="$1"
-				checkUrl
-				if [ "$urlGood" = false ]; then
-						exit 1
-				fi
+	verbose "Verbose mode is enabled."
+	verbose "Ensuring that $URL has at least $DAYS days of validity remaining."
+	checkUrl
+	if [ "$URLGOOD" = false ]; then
+		exit 1
 	fi
+
 	checkSsl
 	pullCert
 	drawReport
 }
-function quietMain()
-{
-	quietCheckurl
-                if [ "$urlGood" = false ]; then
-			printf "URL Error"
-	                exit 1
-                fi
-	quietCheckssl
-		if [ "$sslGood" = false ]; then
-			print "SSL Error"
-			exit 1
-		fi
-	pullCert
-	quietReport
+
+function usage() {
+	cat << EOF
+	usage: $0 options
+	OPTIONS:
+	 -h Show [H]elp (this message)
+	 -d [D]ays to compare against                                                     (not yet implemented)
+	 -u [U]rl to verify                                                            [Required][Value Needed]
+	 -v [V]erbose
+EOF
+exit 1
 }
-# if an argument is provided, it is set to the URL.
+
+function timestamp() {
+	date +%F_%T
+}
+
+function verbose() {
+	# if verbose mode is active, display a nice message.
+	if [[ $VERBOSE -eq 1 ]] ; then
+		printf "$(timestamp) $* \n"
+	fi
+}
+
+# Clear any pre-existing arguments
 unset URL
-URL="$1"
-#main $URL
-while getopts ":q:" quiet; do
-	case $quiet in
-		q)
-			URL="$OPTARG"
-			quietMain $URL
-			exit 0
-			;;
-		:)
-			printf "Option -$OPTARG requires an arguement.\n"
-			exit 1
-			;;
-	esac
-done
-main $URL
+unset VERBOSE
+unset QUIET
+unset DRY
+
+# parse all options passed from the command line.
+parseopts $*
+main
