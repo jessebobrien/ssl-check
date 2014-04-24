@@ -28,27 +28,17 @@ function verbose() {
                 printf "$(timestamp) $* \n"
         fi
 }
-function checkUrl()
-{
-	# gives us a value to work with.
-	checkUrl=$(dig +short $URL)
-	verbose "Digging for $URL"
-	#checks output and displays message and gives boolean output to work with
-	if [ -n "$checkUrl" ]; then
-			verbose "Hostname: $URL is valid."
-			URLGOOD=true
-	else
-			verbose "Could NOT verify $URL exists!"
-			URLGOOD=false
-			exit_error "URL is no good!"
-	fi
-}
 function pullWhois()
 {
 	# pulls entire cert for given URL
 	FULLWHOIS=$(echo | whois "$URL" 2>/dev/null)
 	# cuts entire cert down the a string that is the line containing the expiration date of cert
-	CUTWHOIS=$(echo "$FULLWHOIS" | grep -i -m 1 "Expiration\|Expiry")
+	CUTWHOIS=$(echo "$FULLWHOIS" | grep -i -m 1 "Expiration\|Expiry\|Expire")
+	# verify data is from site, not generic notice paragraph
+	if [[ $CUTWHOIS == *NOTICE* ]]; then
+		exit_error "Whois failed to find data on URL."
+		exit 1
+	fi
 	# this cuts the cert date down
 	CUTWHOIS=${CUTWHOIS#*: }
 	# converts cert date to epoch time
@@ -114,7 +104,6 @@ function main()
 	# main loop
 	verbose "Verbose mode is enabled."
 	verbose "Ensuring that $URL has at least $DAYS days left of validity remaining."
-	checkUrl
 	if [ "$URLGOOD" = false ]; then
 		exit 1
 	fi
