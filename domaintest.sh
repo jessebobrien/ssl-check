@@ -1,125 +1,131 @@
 #!/bin/bash
-# This script is intended to easily check information of a cert and verify validity for at least 60 days
+# This script is intended to easily check information of a domain name and verify validity for at least 60 days
 
 
 function exit_error()
 {
 	# explain the error and quit.
-	printf "We experienced a problem: $1"
+	printf "We experienced a problem: $1\n"
 	exit 1
 }
-function getUrl()
-{
-	# ask for input
-	echo "Please enter web address to check [www.example.com]:"
-	# puts input into a string
-	read URL
+function usage() {
+        cat << EOF
+        usage: $0 options
+        OPTIONS:
+         -h Show [H]elp (this message)
+         -d [D]ays to compare against                                                     (not yet implemented)
+         -u [U]rl to verify                                                            [Required][Value Needed]
+         -v [V]erbose
+EOF
+exit 1
+}
+function timestamp() {
+        date +%F_%T
+}
+function verbose() {
+        # if verbose mode is active, display a nice message.
+        if [[ $VERBOSE -eq 1 ]] ; then
+                printf "$(timestamp) $* \n"
+        fi
 }
 function checkUrl()
 {
 	# gives us a value to work with.
-	checkUrl=`dig +short $URL`
+	checkUrl=$(dig +short $URL)
+	verbose "Digging for $URL"
 	#checks output and displays message and gives boolean output to work with
 	if [ -n "$checkUrl" ]; then
-			printf "\nHostname: $URL is valid.\n"
-			urlGood=true
+			verbose "Hostname: $URL is valid."
+			URLGOOD=true
 	else
-			printf "\nCould NOT verify $URL exists!\n"
-			urlGood=false
+			verbose "Could NOT verify $URL exists!"
+			URLGOOD=false
+			exit_error "URL is no good!"
 	fi
 }
-function quietCheckurl()
-{
-        checkUrl=`dig +short $URL`
-        if [ -n "$checkUrl" ]; then
-                        urlGood=true
-        else
-                        urlGood=false
-        fi
-}
-function pullwhois()
+function pullWhois()
 {
 	# pulls entire cert for given URL
-	fullwhois=$(echo | whois "$URL" 2>/dev/null)
+	FULLWHOIS=$(echo | whois "$URL" 2>/dev/null)
 	# cuts entire cert down the a string that is the line containing the expiration date of cert
-	cutwhois=$(echo "$fullwhois" | grep -i -m 1 "Expiration\|Expiry")
+	CUTWHOIS=$(echo "$FULLWHOIS" | grep -i -m 1 "Expiration\|Expiry")
 	# this cuts the cert date down
-	cutwhois=${cutwhois#*: }
+	CUTWHOIS=${CUTWHOIS#*: }
 	# converts cert date to epoch time
-	epochwhois=`date --date="$cutwhois" +%s`
+	EPOCHWHOIS=`date --date="$CUTWHOIS" +%s`
 	# gives us identical epoch time for time as run
-	epochnow=`date +%s`
+	EPOCHNOW=`date +%s`
 	# calculate differnce between epoch dates
-	datediff=$(expr "$epochwhois" - "$epochnow")
+	DATEDIFF=$(expr "$EPOCHWHOIS" - "$EPOCHNOW")
 	# give days left in readable format
-	daysleft=$(($datediff/86400))
+	DAYSLEFT=$(($DATEDIFF/86400))
 }
 function drawReport()
 {
-	# draw results
-	printf "\n%-20s %-40s %-20s\n" "URL" "Expires" "Difference (epoch)" #header
-	printf "%-20s %-40s %-20s\n\n" "${URL}" "${cutwhois}" "${datediff}" #data
-	# verify difference isn't less than 60 days
-	if [ "$datediff" -lt "5184000" ]; then
-			printf "\n!!!!This cert is expiring in $daysleft!!!!\n"
-						printf "\n\nAn email has been sent to the root user of this machine\n\n"
-						echo "ATTENTION! This cert is expiring in $daysleft days, please correct immediately: ""$URL" | \
-						 mail -s "SSL Expiration Warning!" root
-	else
-			echo "This cert has $daysleft days left, no rush. Go grab some coffee."
+	# draw results if verbose mode is enabled
+        if [[ $VERBOSE -eq 1 ]] ; then
+		printf "\n%-20s %-40s %-20s\n" "URL" "Expires" "Difference (epoch)" #header
+		printf "%-20s %-40s %-20s\n\n" "${URL}" "${CUTWHOIS}" "${DATEDIFF}" #data
 	fi
+	# verify difference isn't less than 60 days
+	if [ "$DATEDIFF" -lt "5184000" ]; then
+			verbose "!!!!This cert is expiring in $DAYSLEFT!!!!"
+						verbose "\n\nAn email has been sent to the root user of this machine\n\n"
+						verbose "ATTENTION! This cert is expiring in $DAYSLEFT days, please correct immediately: ""$URL" | \
+						mail -s "SSL Expiration Warning!" root
+	else
+			verbose "This cert has $DAYSLEFT days left, no rush. Go grab some coffee."
+	fi
+        printf "$DAYSLEFT\n" #print this even if verbose isn't active, provides parseable output for other applications.
 }
-function quietReport()
-{
-	printf "$daysleft"
+function parseopts() {
+        # command-line argument parsing
+
+        while getopts "d:u:dhqv" OPTION ; do
+                case $OPTION in
+                h) usage          ;;
+                d) DAYS=$OPTARG   ;;
+                u) URL=$OPTARG    ;;
+                v) VERBOSE=1      ;;
+                esac
+        done
+
+        if [[ -z $DAYS ]] ; then
+                # we need to know how many days to compare against.
+                if [[ $VERBOSE -eq 1 ]] ; then
+                        read -p "How many days of validity do you require? [default: 60] " DAYS
+                        DAYS=${DAYS:-60}
+                else
+                        DAYS=60
+                fi
+        fi
+
+        if [[ -z $URL ]] ; then
+                # no URL provided!
+                usage
+        fi
+        verbose "Verbose mode is enabled."
+        verbose "Comparing $URL against $DAYS days."
 }
 function main()
 {
 	# main loop
-
-	# If the URL isn't already set, request it.
-	if [[ -z "$URL" ]]; then
-		getUrl
-		checkUrl
-		if [ "$urlGood" = false ]; then
-						exit 0
-				fi
-	else
-		URL="$1"
-				checkUrl
-				if [ "$urlGood" = false ]; then
-						exit 0
-				fi
+	verbose "Verbose mode is enabled."
+	verbose "Ensuring that $URL has at least $DAYS days left of validity remaining."
+	checkUrl
+	if [ "$URLGOOD" = false ]; then
+		exit 1
 	fi
-	pullwhois
+	pullWhois
 	drawReport
 }
-function quietMain()
-{
-        quietCheckurl
-                if [ "$urlGood" = false ]; then
-                        printf "URL Error"
-                        exit 1
-                fi
-        pullwhois
-        quietReport
-}
 
-# if an argument is provided, it is set to the URL.
+# Clear any pre-existing arguments
 unset URL
-URL="$1"
-while getopts ":q:" quiet; do
-        case $quiet in
-                q)
-                        URL="$OPTARG"
-                        quietMain $URL
-                        exit 0
-                        ;;
-                :)
-                        printf "Option -$OPTARG requires an arguement.\n"
-                        exit 1
-                        ;;
-        esac
-done
+unset VERBOSE
+unset QUIET
+unset DRY
 
+# parse all options passed from the command line.
+parseopts $*
 main $URL
