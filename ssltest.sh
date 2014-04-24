@@ -96,7 +96,9 @@ function drawReport()
 			verbose "!!!!This cert is expiring on %s!!!!", $CERTEXP
 						verbose "\n\nAn email has been sent to the root user of this machine\n\n"
 						verbose "ATTENTION! This cert is expiring in $daysleft days, please correct immediately: ""$URL" | \
-						mail -s "SSL Expiration Warning!" root
+                                                SUBJECT="SSL Expiration Warning."
+                                                EMAILMESSAGE="Danger! $URL has a SSL Certificate expiring in $DAYSLEFT days."
+                                                echo "$EMAILMESSAGE" | mail -s "$SUBJECT" root
 	else
 			verbose "This cert has $daysleft days left, much better than the $DAYS you had requested. Go grab some coffee."
 	fi

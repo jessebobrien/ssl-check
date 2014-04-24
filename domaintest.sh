@@ -71,9 +71,11 @@ function drawReport()
 	if [ "$DATEDIFF" -lt "5184000" ]; then
 			verbose "!!!!This cert is expiring in $DAYSLEFT!!!!"
 						verbose "\n\nAn email has been sent to the root user of this machine\n\n"
-						verbose "ATTENTION! This cert is expiring in $DAYSLEFT days, please correct immediately: ""$URL" | \
-						mail -s "SSL Expiration Warning!" root
-	else
+						verbose "ATTENTION! This domain name is expiring in $DAYSLEFT days, please correct immediately: $URL"
+						SUBJECT="Domain Name Expiration Warning."
+						EMAILMESSAGE="Danger! $URL has a domain name expiring in $DAYSLEFT days." 
+						echo "$EMAILMESSAGE" | mail -s "$SUBJECT" root
+else
 			verbose "This cert has $DAYSLEFT days left, no rush. Go grab some coffee."
 	fi
         printf "$DAYSLEFT\n" #print this even if verbose isn't active, provides parseable output for other applications.
