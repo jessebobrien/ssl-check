@@ -30,10 +30,8 @@ function verbose() {
 }
 function pullWhois()
 {
-	# pulls entire cert for given URL
-	FULLWHOIS=$(echo | whois "$URL" 2>/dev/null)
-	# cuts entire cert down the a string that is the line containing the expiration date of cert
-	CUTWHOIS=$(echo "$FULLWHOIS" | grep -i -m 1 "Expiration\|Expiry\|Expire")
+	# Only show the expiration of the cert
+	CUTWHOIS=$(whois "$URL" | grep -i -m 1 "Expiration\|Expiry\|Expire")
 	# verify data is from site, not generic notice paragraph
 	if [[ $CUTWHOIS == *NOTICE* ]]; then
 		exit_error "Whois failed to find data on URL."
